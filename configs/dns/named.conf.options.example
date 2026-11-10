@@ -1,0 +1,26 @@
+// /etc/named.conf on ldap.lab.local: lines changed inside options { }
+// and the two zone declarations appended at the end of the file.
+options {
+        listen-on port 53 { 127.0.0.1; 192.168.0.210; };
+        allow-query     { localhost; 192.168.0.0/24; };
+        recursion yes;
+        allow-recursion { localhost; 192.168.0.0/24; };
+        forwarders { 1.1.1.1; 9.9.9.9; };
+        forward only;
+        // Off on purpose: the upstream network intercepts port 53 and strips
+        // DNSSEC data (see docs/troubleshooting.md). Lab zones are unaffected.
+        dnssec-validation no;
+        // ... distribution defaults unchanged ...
+};
+
+zone "lab.local" IN {
+        type master;
+        file "lab.local.zone";
+        allow-update { none; };
+};
+
+zone "0.168.192.in-addr.arpa" IN {
+        type master;
+        file "192.168.0.rev";
+        allow-update { none; };
+};

@@ -1,0 +1,9 @@
+; /var/named/192.168.0.rev  (root:named, 0640, SELinux type named_zone_t)
+$TTL 3600
+@       IN SOA  ldap.lab.local. hostmaster.lab.local. (
+                2026110901 3600 900 604800 300 )
+        IN NS   ldap.lab.local.
+
+210     IN PTR  ldap.lab.local.
+220     IN PTR  client.lab.local.
+230     IN PTR  nfs.lab.local.

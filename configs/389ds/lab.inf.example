@@ -1,0 +1,20 @@
+; 389-ds instance definition. Copy to /root/lab.inf, set a real password,
+; chmod 600, run: dscreate from-file /root/lab.inf, then shred -u /root/lab.inf
+[general]
+full_machine_name = ldap.lab.local
+selinux = True
+
+[slapd]
+instance_name = lab
+root_dn = cn=Directory Manager
+root_password = CHANGE_ME
+port = 389
+secure_port = 636
+self_sign_cert = True
+
+; Must be present and uncommented. Without it dscreate still succeeds but
+; builds an instance with NO backend (searches return "No such object").
+[backend-userroot]
+create_suffix_entry = True
+suffix = dc=lab,dc=local
+sample_entries = no
