@@ -1,0 +1,14 @@
+# Sudo rules served from the directory. Members of sysadmins may run any command.
+dn: ou=SUDOers,dc=lab,dc=local
+objectClass: top
+objectClass: organizationalUnit
+ou: SUDOers
+
+dn: cn=%sysadmins,ou=SUDOers,dc=lab,dc=local
+objectClass: top
+objectClass: sudoRole
+cn: %sysadmins
+sudoUser: %sysadmins
+sudoHost: ALL
+sudoRunAsUser: ALL
+sudoCommand: ALL

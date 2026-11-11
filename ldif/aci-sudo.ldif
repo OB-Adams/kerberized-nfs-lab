@@ -1,0 +1,4 @@
+dn: ou=SUDOers,dc=lab,dc=local
+changetype: modify
+add: aci
+aci: (targetattr = "objectClass || cn || sudoUser || sudoHost || sudoCommand || sudoRunAsUser || sudoRunAsGroup || sudoOption || sudoOrder || sudoNotBefore || sudoNotAfter || modifyTimestamp")(version 3.0; acl "sssd-bind read sudo rules"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local";)
