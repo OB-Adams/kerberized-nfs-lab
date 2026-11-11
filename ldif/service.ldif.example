@@ -1,0 +1,15 @@
+# Service account SSSD binds as. Load over StartTLS, then replace the
+# placeholder immediately with: ldappasswd -x -ZZ ... -S "uid=sssd-bind,..."
+# simpleSecurityObject requires a userPassword at creation time.
+dn: ou=Services,dc=lab,dc=local
+objectClass: top
+objectClass: organizationalUnit
+ou: Services
+
+dn: uid=sssd-bind,ou=Services,dc=lab,dc=local
+objectClass: top
+objectClass: account
+objectClass: simpleSecurityObject
+uid: sssd-bind
+description: Read-only lookup account for SSSD clients
+userPassword: temporary-change-me

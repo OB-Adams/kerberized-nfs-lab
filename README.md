@@ -26,8 +26,8 @@ UTM bridged networking on 192.168.0.0/24. SELinux enforcing and firewalld on eve
 | M0 Foundations: static IPs, DNS, time | done |
 | M1 Directory | done |
 | M2 TLS | done |
-| M3 Access control | in progress |
-| M4 Client (SSSD) | |
+| M3 Access control | done |
+| M4 Client (SSSD) | in progress |
 | M5 Operations: backup, restore drill | |
 | M6 Write-up | |
 | Kerberos realm | |
@@ -47,6 +47,7 @@ docs/             troubleshooting.md, screenshots/
 
 ## Known trade-offs
 
+- Lockout after 3 failed binds for 5 minutes stops online password guessing, but anyone who knows a username can lock that account on purpose. The short, self-expiring lockout limits that denial of service.
 - The lab root CA's private key lives on ldap in `/root/ca` (mode 700). A production CA key would be kept offline.
 - `lab.local` uses the mDNS-reserved `.local` TLD (RFC 6762). The VMs run no mDNS resolver, so BIND answers normally; macOS sends `.local` names to mDNS, so the Mac reaches the VMs by IP. A real deployment would use an owned domain or `home.arpa`.
 - DNSSEC validation is off in BIND because the upstream network intercepts port 53 and strips DNSSEC data. See [docs/troubleshooting.md](docs/troubleshooting.md).

@@ -1,0 +1,15 @@
+# Allow-list ACIs. Anything not listed is invisible to sssd-bind, including
+# userPassword and any attribute added later (e.g. Kerberos keys).
+
+dn: ou=People,dc=lab,dc=local
+changetype: modify
+add: aci
+aci: (targetattr = "objectClass || uid || cn || gecos || uidNumber || gidNumber || homeDirectory || loginShell || memberOf || modifyTimestamp")(version 3.0; acl "sssd-bind read users"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "userPassword")(version 3.0; acl "users change own password"; allow (write) userdn = "ldap:///self";)
+
+dn: ou=Groups,dc=lab,dc=local
+changetype: modify
+add: aci
+aci: (targetattr = "objectClass || cn || gidNumber || member || memberUid || modifyTimestamp")(version 3.0; acl "sssd-bind read groups"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local";)
