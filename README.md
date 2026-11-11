@@ -24,9 +24,9 @@ UTM bridged networking on 192.168.0.0/24. SELinux enforcing and firewalld on eve
 | Milestone | Status |
 |---|---|
 | M0 Foundations: static IPs, DNS, time | done |
-| M1 Directory | in progress |
-| M2 TLS | |
-| M3 Access control | |
+| M1 Directory | done |
+| M2 TLS | done |
+| M3 Access control | in progress |
 | M4 Client (SSSD) | |
 | M5 Operations: backup, restore drill | |
 | M6 Write-up | |
@@ -39,6 +39,7 @@ UTM bridged networking on 192.168.0.0/24. SELinux enforcing and firewalld on eve
 configs/dns/      named.conf options (example) and zone files
 configs/chrony/   time source and client snippets
 configs/389ds/    lab.inf.example
+configs/tls/      CA and server certificate extension files
 ldif/             directory structure, service account, ACIs
 scripts/          user lifecycle, health check, backup
 docs/             troubleshooting.md, screenshots/
@@ -46,6 +47,7 @@ docs/             troubleshooting.md, screenshots/
 
 ## Known trade-offs
 
+- The lab root CA's private key lives on ldap in `/root/ca` (mode 700). A production CA key would be kept offline.
 - `lab.local` uses the mDNS-reserved `.local` TLD (RFC 6762). The VMs run no mDNS resolver, so BIND answers normally; macOS sends `.local` names to mDNS, so the Mac reaches the VMs by IP. A real deployment would use an owned domain or `home.arpa`.
 - DNSSEC validation is off in BIND because the upstream network intercepts port 53 and strips DNSSEC data. See [docs/troubleshooting.md](docs/troubleshooting.md).
 

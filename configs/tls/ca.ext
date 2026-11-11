@@ -1,0 +1,4 @@
+# Extensions for the lab root CA certificate
+basicConstraints = critical, CA:TRUE
+keyUsage = critical, keyCertSign, cRLSign
+subjectKeyIdentifier = hash

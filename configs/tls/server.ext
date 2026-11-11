@@ -1,0 +1,7 @@
+# Extensions for the ldap.lab.local server certificate
+subjectAltName = DNS:ldap.lab.local
+basicConstraints = critical, CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid, issuer
