@@ -1,5 +1,7 @@
 # /etc/sssd/sssd.conf on every LDAP client (client, later nfs)
-# Ownership/mode: readable by the user SSSD runs as (see runbook), never world-readable.
+# Holds the sssd-bind password. Never world-readable:
+#   root:sssd 0640 when SSSD runs as user sssd (systemctl cat sssd shows User=sssd)
+#   root:root 0600 when SSSD runs as root
 [sssd]
 services = nss, pam, sudo
 domains = lab.local

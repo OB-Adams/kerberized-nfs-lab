@@ -8,7 +8,9 @@ Real failures hit while building this lab, with the diagnosis path for each.
 | SSSD on client stays `Offline`; `id kofi` says no such user | `sssctl debug-level 6`; `sssd_lab.local.log` shows `Password Policy Response: ... error [Account locked]` and `Bind result: Constraint violation(19), Exceed password retry limit` for sssd-bind (the "Failed to resolve server ... no data" lines after it were AAAA lookups during failover, not the cause) | A wrong password in `sssd.conf` made SSSD fail three binds, so the global lockout policy locked the service account; while locked even the correct password is refused. Design flaw: anyone could lock sssd-bind and take every client offline. Fix: subtree password policy on `ou=Services` with lockout off (`nsslapd-pwpolicy-local=on`, `dsconf lab localpwp addsubtree ou=Services,dc=lab,dc=local --pwdlockout off`), a 32-character random password for sssd-bind, and `lookup_family_order = ipv4_only` in sssd.conf. |
 | M5 restore-drill logs from ldap and client put events in an impossible order (client loses a user before ldap deletes it, finds her again before ldap restores her) | Laying the two `run()` logs side by side: every client event sits about 16-18 s before the ldap event that caused it, consistently across two runs | Client's clock was ~18 s behind. The VMs pause while the host Mac sleeps, and the default `makestep 1.0 3` only allows chrony to step the clock during its first 3 updates; after that it only slews. Set `makestep 1.0 -1` on every host (step whenever the offset exceeds 1 s). After the change both logs line up to the second. Matters for Kerberos, which rejects requests more than 5 minutes off. |
 
-## LDAP result codes seen in this lab
+## LDAP result codes
+
+Returned during this build, plus 32 and 65, which the M1 checks (backend suffix list, rfc2307compat schema) are there to prevent.
 
 | Code | Name | Meaning here |
 |---|---|---|
