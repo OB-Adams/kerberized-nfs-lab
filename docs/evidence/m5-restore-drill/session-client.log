@@ -1,0 +1,22 @@
+## 2026-11-12 01:58:59 $ id ama
+id: ‘ama’: no such user
+## 2026-11-12 01:58:59 $ sss_cache -E
+## 2026-11-12 01:58:59 $ id ama
+id: ‘ama’: no such user
+## 2026-11-12 01:59:21 $ ldapsearch -LLL -x -ZZ -H ldap://ldap.lab.local -D cn=Directory Manager -W -b ou=People,dc=lab,dc=local (uid=ama) uid uidNumber memberOf
+Enter LDAP Password: 
+dn: uid=ama,ou=People,dc=lab,dc=local
+uid: ama
+uidNumber: 10002
+memberOf: cn=ldapusers,ou=Groups,dc=lab,dc=local
+
+## 2026-11-12 01:59:24 $ ldapsearch -LLL -x -ZZ -H ldap://ldap.lab.local -D cn=Directory Manager -W -b cn=ldapusers,ou=Groups,dc=lab,dc=local -s base member
+Enter LDAP Password: 
+dn: cn=ldapusers,ou=Groups,dc=lab,dc=local
+member: uid=kofi,ou=People,dc=lab,dc=local
+member: uid=ama,ou=People,dc=lab,dc=local
+member: uid=yaw,ou=People,dc=lab,dc=local
+
+## 2026-11-12 01:59:31 $ sss_cache -E
+## 2026-11-12 01:59:31 $ id ama
+uid=10002(ama) gid=10000(ldapusers) groups=10000(ldapusers)

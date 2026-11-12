@@ -1,0 +1,49 @@
+## 2026-11-12 01:58:23 $ ldapsearch -LLL -x -ZZ -H ldap://ldap.lab.local -D cn=Directory Manager -W -b ou=People,dc=lab,dc=local (uid=ama) uid uidNumber memberOf
+Enter LDAP Password: 
+dn: uid=ama,ou=People,dc=lab,dc=local
+uid: ama
+uidNumber: 10002
+memberOf: cn=ldapusers,ou=Groups,dc=lab,dc=local
+
+## 2026-11-12 01:58:27 $ ldapsearch -LLL -x -ZZ -H ldap://ldap.lab.local -D cn=Directory Manager -W -b cn=ldapusers,ou=Groups,dc=lab,dc=local -s base member
+Enter LDAP Password: 
+dn: cn=ldapusers,ou=Groups,dc=lab,dc=local
+member: uid=kofi,ou=People,dc=lab,dc=local
+member: uid=ama,ou=People,dc=lab,dc=local
+member: uid=yaw,ou=People,dc=lab,dc=local
+
+## 2026-11-12 01:58:35 $ /usr/local/sbin/ldap-backup.sh
+The backup create task has finished successfully
+The export task has finished successfully
+Backup complete.
+Newest binary backup: /var/lib/dirsrv/slapd-lab/bak/backup-2026_11_12_01_58_36/
+Newest LDIF export:   /var/lib/dirsrv/slapd-lab/ldif/lab-userroot-2026_11_12_01_58_38.ldif
+## 2026-11-12 01:58:41 $ /usr/local/sbin/ldap-del-user.sh ama
+Directory Manager password: 
+User: uid=ama,ou=People,dc=lab,dc=local
+Groups: cn=ldapusers,ou=Groups,dc=lab,dc=local
+Delete ama and remove from these groups? [y/N] modifying entry "cn=ldapusers,ou=Groups,dc=lab,dc=local"
+
+Deleted ama. On SSSD clients, run: sss_cache -E
+## 2026-11-12 01:58:47 $ ldapsearch -LLL -x -ZZ -H ldap://ldap.lab.local -D cn=Directory Manager -W -b ou=People,dc=lab,dc=local (uid=ama) uid
+Enter LDAP Password: 
+## 2026-11-12 01:59:04 $ dsctl lab stop
+Instance "lab" has been stopped
+## 2026-11-12 01:59:05 $ dsctl lab bak2db /var/lib/dirsrv/slapd-lab/bak/backup-2026_11_12_01_58_36/
+bak2db successful
+## 2026-11-12 01:59:06 $ dsctl lab start
+Instance "lab" has been started
+## 2026-11-12 01:59:13 $ ldapsearch -LLL -x -ZZ -H ldap://ldap.lab.local -D cn=Directory Manager -W -b ou=People,dc=lab,dc=local (uid=ama) uid uidNumber memberOf
+Enter LDAP Password: 
+dn: uid=ama,ou=People,dc=lab,dc=local
+uid: ama
+uidNumber: 10002
+memberOf: cn=ldapusers,ou=Groups,dc=lab,dc=local
+
+## 2026-11-12 01:59:16 $ ldapsearch -LLL -x -ZZ -H ldap://ldap.lab.local -D cn=Directory Manager -W -b cn=ldapusers,ou=Groups,dc=lab,dc=local -s base member
+Enter LDAP Password: 
+dn: cn=ldapusers,ou=Groups,dc=lab,dc=local
+member: uid=kofi,ou=People,dc=lab,dc=local
+member: uid=ama,ou=People,dc=lab,dc=local
+member: uid=yaw,ou=People,dc=lab,dc=local
+

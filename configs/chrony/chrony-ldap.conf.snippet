@@ -1,3 +1,6 @@
 # Added to /etc/chrony.conf on ldap.lab.local (keep the distribution pool line)
 allow 192.168.0.0/24
 local stratum 10
+# VMs lose time in jumps when paused (host sleep). Allow stepping at any time
+# when the offset exceeds 1 s, not only during the first 3 updates.
+makestep 1.0 -1

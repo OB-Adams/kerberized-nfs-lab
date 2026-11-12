@@ -1,2 +1,4 @@
 # /etc/chrony.conf on every other lab host: replace the pool line with
 server ldap.lab.local iburst
+# and replace the default "makestep 1.0 3" with (VMs lose time when paused)
+makestep 1.0 -1

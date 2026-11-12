@@ -2,15 +2,16 @@
 # Add a POSIX user (rfc2307bis) and set an initial password.
 # Usage: ldap-add-user.sh <username> <given-name> <surname> [extra-group ...]
 # The user gets gidNumber of the primary group (default ldapusers) and is added
-# as a member of it and of any extra groups. Run where openldap-clients is
-# installed and the lab CA is trusted.
+# as a member of it and of any extra groups. uidNumber is assigned by the server's
+# DNA plugin (magic value -1), so numbers are never reused after a delete.
+# Run where openldap-clients is installed and the lab CA is trusted.
 set -euo pipefail
 
 LDAP_URI="${LDAP_URI:-ldap://ldap.lab.local}"
 BASE_DN="${BASE_DN:-dc=lab,dc=local}"
 ADMIN_DN="${ADMIN_DN:-cn=Directory Manager}"
 PRIMARY_GROUP="${PRIMARY_GROUP:-ldapusers}"
-UID_FLOOR="${UID_FLOOR:-10000}"
+DNA_MAGIC="${DNA_MAGIC:--1}"
 
 usage() { echo "Usage: $0 <username> <given-name> <surname> [extra-group ...]" >&2; exit 2; }
 [[ $# -ge 3 ]] || usage
@@ -42,11 +43,6 @@ for g in "${extra_groups[@]}"; do
   member_of+=("$d")
 done
 
-# Next free uidNumber: highest existing + 1, never at or below the floor.
-max=$(lsearch -b "ou=People,$BASE_DN" "(uidNumber=*)" uidNumber | awk '/^uidNumber:/{print $2}' | sort -n | tail -1)
-next=$(( ${max:-$UID_FLOOR} + 1 ))
-(( next > UID_FLOOR )) || next=$(( UID_FLOOR + 1 ))
-
 ldap ldapadd <<LDIF
 dn: $user_dn
 objectClass: top
@@ -58,11 +54,19 @@ uid: $user
 cn: $given $sn
 sn: $sn
 givenName: $given
-uidNumber: $next
+uidNumber: $DNA_MAGIC
 gidNumber: $gid
 homeDirectory: /home/$user
 loginShell: /bin/bash
 LDIF
+
+# Read back the number DNA assigned; abort if the plugin did not replace the magic value.
+uidnum=$(lsearch -b "$user_dn" -s base uidNumber | awk '/^uidNumber:/{print $2}')
+if [[ -z $uidnum || $uidnum == "$DNA_MAGIC" ]]; then
+  echo "DNA did not assign a uidNumber (got '${uidnum:-none}'). Is the DNA plugin configured?" >&2
+  ldap ldapdelete "$user_dn"
+  exit 1
+fi
 
 # Group membership by DN; the memberOf plugin writes the reverse link.
 for gdn in "${member_of[@]}"; do
@@ -74,5 +78,5 @@ member: $user_dn
 LDIF
 done
 
-echo "Created $user (uidNumber $next, gidNumber $gid). Set the initial password:"
+echo "Created $user (uidNumber $uidnum, gidNumber $gid). Set the initial password:"
 ldap ldappasswd -S "$user_dn"
