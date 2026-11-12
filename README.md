@@ -41,8 +41,9 @@ configs/chrony/   time source and client snippets
 configs/389ds/    lab.inf.example
 configs/tls/      CA and server certificate extension files
 configs/sssd/     sssd.conf.example (client side)
+configs/systemd/  nightly backup service and timer
 ldif/             directory structure, service account, ACIs, sudo rules
-scripts/          user lifecycle, health check, backup
+scripts/          ldap-add-user.sh, ldap-del-user.sh, ldap-healthcheck.sh, ldap-backup.sh
 docs/             troubleshooting.md, screenshots/
 ```
 
