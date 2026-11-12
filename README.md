@@ -28,8 +28,8 @@ UTM bridged networking on 192.168.0.0/24. SELinux enforcing and firewalld on eve
 | M2 TLS | done |
 | M3 Access control | done |
 | M4 Client (SSSD) | done |
-| M5 Operations: backup, restore drill | in progress |
-| M6 Write-up | |
+| M5 Operations: backup, restore drill | done |
+| M6 Write-up | in progress |
 | Kerberos realm | |
 | Kerberized NFS | |
 

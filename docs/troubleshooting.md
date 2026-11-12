@@ -17,6 +17,6 @@ Real failures hit while building this lab, with the diagnosis path for each.
 | 32 | No such object | base DN does not exist (or instance has no backend) |
 | 48 | Inappropriate authentication | anonymous search outside the rootDSE: `Anonymous access is not allowed.` (`nsslapd-allow-anonymous-access=rootdse`) |
 | 49 | Invalid credentials | wrong password or wrong bind DN |
-| 53 | Unwilling to perform | bind with a DN but an empty password (unauthenticated bind) |
+| 53 | Unwilling to perform | bind with a DN but an empty password (unauthenticated bind); or bind as an administratively locked account: `Account inactivated. Contact system administrator.` (`dsidm ... account lock`, `nsAccountLock: true`) |
 | 65 | Object class violation | entry breaks the schema (e.g. two structural classes) |
 | 68 | Already exists | entry or config object (e.g. an index) already present |
