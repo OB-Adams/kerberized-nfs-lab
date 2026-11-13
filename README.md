@@ -60,7 +60,7 @@ UTM bridged networking on 192.168.0.0/24. SELinux is enforcing and firewalld is 
 | M4 Client (SSSD) | done |
 | M5 Operations: lifecycle, health check, backup, restore drill | done |
 | M6 Write-up | done |
-| Kerberos realm `LAB.LOCAL` | next |
+| Kerberos realm `LAB.LOCAL` | in progress |
 | Kerberized NFS | planned |
 
 ## What was built
@@ -193,6 +193,7 @@ configs/chrony/   time source and client snippets
 configs/389ds/    lab.inf.example
 configs/tls/      CA and server certificate extension files
 configs/sssd/     sssd.conf.example (client side)
+configs/krb5/     krb5.conf for every lab host
 configs/systemd/  nightly backup service and timer
 ldif/             directory structure, service account, ACIs, sudo rules
 scripts/          ldap-add-user.sh, ldap-del-user.sh, ldap-healthcheck.sh, ldap-backup.sh

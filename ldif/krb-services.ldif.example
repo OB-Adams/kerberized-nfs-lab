@@ -1,0 +1,18 @@
+# Bind identities for the MIT KDC (read-mostly) and kadmind (writes principals)
+# when the Kerberos database lives in 389-ds. Load over StartTLS, then replace
+# both placeholders with ldappasswd -S and long random passwords.
+dn: uid=kdc-service,ou=Services,dc=lab,dc=local
+objectClass: top
+objectClass: account
+objectClass: simpleSecurityObject
+uid: kdc-service
+description: krb5kdc bind identity for the LDAP database backend
+userPassword: temporary-change-me
+
+dn: uid=kadmin-service,ou=Services,dc=lab,dc=local
+objectClass: top
+objectClass: account
+objectClass: simpleSecurityObject
+uid: kadmin-service
+description: kadmind bind identity for the LDAP database backend
+userPassword: temporary-change-me
