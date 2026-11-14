@@ -193,7 +193,7 @@ configs/chrony/   time source and client snippets
 configs/389ds/    lab.inf.example
 configs/tls/      CA and server certificate extension files
 configs/sssd/     sssd.conf.example (client side)
-configs/krb5/     krb5.conf for every lab host
+configs/krb5/     krb5.conf (every host), kdc.conf and kadm5.acl (KDC)
 configs/systemd/  nightly backup service and timer
 ldif/             directory structure, service account, ACIs, sudo rules
 scripts/          ldap-add-user.sh, ldap-del-user.sh, ldap-healthcheck.sh, ldap-backup.sh

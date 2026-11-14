@@ -1,0 +1,26 @@
+# Rights for the KDC and kadmind bind identities. Apply after kdb5_ldap_util create.
+# kdc-service: read principals and keys, write only login bookkeeping.
+# kadmin-service: manage the Kerberos container; add/modify Kerberos attributes on
+# user entries (never uid, uidNumber, groups or userPassword; never delete users).
+
+dn: cn=krbcontainer,dc=lab,dc=local
+changetype: modify
+add: aci
+aci: (targetattr = "*")(version 3.0; acl "kdc-service read kerberos container"; allow (read, search, compare) userdn = "ldap:///uid=kdc-service,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "krbLastSuccessfulAuth || krbLastFailedAuth || krbLoginFailedCount")(version 3.0; acl "kdc-service write login bookkeeping (container)"; allow (write) userdn = "ldap:///uid=kdc-service,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "*")(version 3.0; acl "kadmin-service manage kerberos container"; allow (read, search, compare, write, add, delete) userdn = "ldap:///uid=kadmin-service,ou=Services,dc=lab,dc=local";)
+
+dn: ou=People,dc=lab,dc=local
+changetype: modify
+add: aci
+aci: (targetattr = "objectClass || krbPrincipalName || krbCanonicalName || krbPrincipalAliases || krbPrincipalKey || krbPrincipalType || krbUPEnabled || krbTicketFlags || krbMaxTicketLife || krbMaxRenewableAge || krbPrincipalExpiration || krbPasswordExpiration || krbPwdPolicyReference || krbTicketPolicyReference || krbLastPwdChange || krbLastAdminUnlock || krbPwdHistory || krbExtraData || krbAllowedToDelegateTo || krbPrincipalAuthInd || krbLastSuccessfulAuth || krbLastFailedAuth || krbLoginFailedCount")(version 3.0; acl "kdc-service read user principals"; allow (read, search, compare) userdn = "ldap:///uid=kdc-service,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "krbLastSuccessfulAuth || krbLastFailedAuth || krbLoginFailedCount")(version 3.0; acl "kdc-service write login bookkeeping (users)"; allow (write) userdn = "ldap:///uid=kdc-service,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "objectClass || krbPrincipalName || krbCanonicalName || krbPrincipalAliases || krbPrincipalKey || krbPrincipalType || krbUPEnabled || krbTicketFlags || krbMaxTicketLife || krbMaxRenewableAge || krbPrincipalExpiration || krbPasswordExpiration || krbPwdPolicyReference || krbTicketPolicyReference || krbLastPwdChange || krbLastAdminUnlock || krbPwdHistory || krbExtraData || krbAllowedToDelegateTo || krbPrincipalAuthInd || krbLastSuccessfulAuth || krbLastFailedAuth || krbLoginFailedCount")(version 3.0; acl "kadmin-service manage user principals"; allow (read, search, compare, write) userdn = "ldap:///uid=kadmin-service,ou=Services,dc=lab,dc=local";)

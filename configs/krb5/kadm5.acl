@@ -1,0 +1,3 @@
+# /var/kerberos/krb5kdc/kadm5.acl: who may do what through kadmind
+# Any principal with the /admin instance has full rights.
+*/admin@LAB.LOCAL    *
