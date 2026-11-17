@@ -1,0 +1,27 @@
+# K5: the three sssd-bind read ACIs (aci.ldif, aci-sudo.ldif) also admit any host
+# entry under ou=Hosts, i.e. a host that bound with its Kerberos keytab.
+# Each block deletes the exact old value and adds the new one in a single modify.
+
+dn: ou=People,dc=lab,dc=local
+changetype: modify
+delete: aci
+aci: (targetattr = "objectClass || uid || cn || gecos || uidNumber || gidNumber || homeDirectory || loginShell || memberOf || modifyTimestamp")(version 3.0; acl "sssd-bind read users"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "objectClass || uid || cn || gecos || uidNumber || gidNumber || homeDirectory || loginShell || memberOf || modifyTimestamp")(version 3.0; acl "sssd-bind read users"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local || ldap:///cn=*,ou=Hosts,dc=lab,dc=local";)
+
+dn: ou=Groups,dc=lab,dc=local
+changetype: modify
+delete: aci
+aci: (targetattr = "objectClass || cn || gidNumber || member || memberUid || modifyTimestamp")(version 3.0; acl "sssd-bind read groups"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "objectClass || cn || gidNumber || member || memberUid || modifyTimestamp")(version 3.0; acl "sssd-bind read groups"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local || ldap:///cn=*,ou=Hosts,dc=lab,dc=local";)
+
+dn: ou=SUDOers,dc=lab,dc=local
+changetype: modify
+delete: aci
+aci: (targetattr = "objectClass || cn || sudoUser || sudoHost || sudoCommand || sudoRunAsUser || sudoRunAsGroup || sudoOption || sudoOrder || sudoNotBefore || sudoNotAfter || modifyTimestamp")(version 3.0; acl "sssd-bind read sudo rules"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local";)
+-
+add: aci
+aci: (targetattr = "objectClass || cn || sudoUser || sudoHost || sudoCommand || sudoRunAsUser || sudoRunAsGroup || sudoOption || sudoOrder || sudoNotBefore || sudoNotAfter || modifyTimestamp")(version 3.0; acl "sssd-bind read sudo rules"; allow (read, search, compare) userdn = "ldap:///uid=sssd-bind,ou=Services,dc=lab,dc=local || ldap:///cn=*,ou=Hosts,dc=lab,dc=local";)

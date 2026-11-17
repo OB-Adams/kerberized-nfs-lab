@@ -1,7 +1,6 @@
 # /etc/sssd/sssd.conf on every LDAP/Kerberos client (client, later nfs)
-# Holds the sssd-bind password. Never world-readable:
-#   root:sssd 0640 when SSSD runs as user sssd (systemctl cat sssd shows User=sssd)
-#   root:root 0600 when SSSD runs as root
+# Holds no secrets since K5: SSSD binds to LDAP with this host's keytab.
+# SSSD still checks its permissions: root:root 0600, or root:sssd 0640 when it runs as user sssd.
 [sssd]
 services = nss, pam, sudo
 domains = lab.local
@@ -43,10 +42,12 @@ ldap_group_search_base = ou=Groups,dc=lab,dc=local
 ldap_sudo_search_base = ou=SUDOers,dc=lab,dc=local
 ldap_user_gecos = cn
 
-# Read-only lookup identity (replaced by a keytab-based SASL/GSSAPI bind in K5)
-ldap_default_bind_dn = uid=sssd-bind,ou=Services,dc=lab,dc=local
-ldap_default_authtok_type = password
-ldap_default_authtok = CHANGE_ME
+# Lookup identity (K5): SASL/GSSAPI bind as host/client.lab.local, key from the keytab.
+# 389-ds maps it to cn=client.lab.local,ou=Hosts (ldif/sasl-map-hosts.ldif).
+ldap_sasl_mech = GSSAPI
+ldap_sasl_authid = host/client.lab.local@LAB.LOCAL
+ldap_krb5_keytab = /etc/krb5.keytab
+ldap_krb5_init_creds = true
 
 cache_credentials = true
 enumerate = false

@@ -1,0 +1,13 @@
+# LDAP identities for host principals. A SASL/GSSAPI bind by
+# host/<fqdn>@LAB.LOCAL is mapped to cn=<fqdn>,ou=Hosts (sasl-map-hosts.ldif).
+# No passwords: these entries are only ever bound to through Kerberos.
+dn: ou=Hosts,dc=lab,dc=local
+objectClass: top
+objectClass: organizationalUnit
+ou: Hosts
+
+dn: cn=client.lab.local,ou=Hosts,dc=lab,dc=local
+objectClass: top
+objectClass: device
+cn: client.lab.local
+description: LDAP identity of host/client.lab.local@LAB.LOCAL (SASL/GSSAPI binds)

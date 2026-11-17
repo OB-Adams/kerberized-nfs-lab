@@ -1,0 +1,13 @@
+# SASL mapping: host/<fqdn>@LAB.LOCAL -> cn=<fqdn>,ou=Hosts,dc=lab,dc=local
+# 389-ds receives the principal WITHOUT the default realm (host/client.lab.local),
+# so the regex must not include @LAB.LOCAL. Priority 10 runs before the built-in
+# "uid mapping" (^[^:@]+$ -> (uid=...)), which would otherwise claim the name.
+# Add over LDAPI as root: ldapadd -Y EXTERNAL -H ldapi://%2frun%2fslapd-lab.socket -f sasl-map-hosts.ldif
+dn: cn=host principals,cn=mapping,cn=sasl,cn=config
+objectClass: top
+objectClass: nsSaslMapping
+cn: host principals
+nsSaslMapRegexString: ^host/\(.*\)$
+nsSaslMapBaseDNTemplate: ou=Hosts,dc=lab,dc=local
+nsSaslMapFilterTemplate: (cn=\1)
+nsSaslMapPriority: 10
