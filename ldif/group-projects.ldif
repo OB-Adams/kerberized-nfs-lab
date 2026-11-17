@@ -1,0 +1,11 @@
+# Group for the shared NFS directory /srv/nfs/projects (root:projects 2770).
+# Access is decided by membership here; nfs.lab.local looks it up through SSSD.
+dn: cn=projects,ou=Groups,dc=lab,dc=local
+objectClass: top
+objectClass: groupOfNames
+objectClass: posixGroup
+cn: projects
+gidNumber: 10002
+description: Members share /srv/nfs/projects on nfs.lab.local
+member: uid=kofi,ou=People,dc=lab,dc=local
+member: uid=yaw,ou=People,dc=lab,dc=local

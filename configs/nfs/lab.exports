@@ -1,0 +1,4 @@
+# /etc/exports.d/lab.exports on nfs.lab.local
+# Only client.lab.local (checked by reverse DNS), only Kerberos with encryption,
+# and root on the client maps to nobody.
+/srv/nfs  client.lab.local(rw,sec=krb5p,root_squash,no_subtree_check)

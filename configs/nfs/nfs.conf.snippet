@@ -1,0 +1,4 @@
+# /etc/nfs.conf on nfs.lab.local: serve NFSv4 only (one port, 2049/tcp).
+# Also: systemctl mask --now rpc-statd.service rpcbind.service rpcbind.socket
+[nfsd]
+vers3=n
