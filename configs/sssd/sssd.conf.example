@@ -11,7 +11,8 @@ id_provider = ldap
 auth_provider = krb5
 chpass_provider = krb5
 access_provider = simple
-simple_allow_groups = sysadmins
+# client admits sysadmins and projects (NFS share users); nfs admits sysadmins only
+simple_allow_groups = sysadmins, projects
 sudo_provider = ldap
 
 # Kerberos: KDC found through the _kerberos SRV records; logins obtain a TGT

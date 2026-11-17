@@ -1,0 +1,3 @@
+# /etc/fstab on client.lab.local: mount the share at boot with Kerberos + encryption.
+# _netdev: wait for the network. Needs rpc-gssd (nfs-client.target) and /etc/krb5.keytab.
+nfs.lab.local:/srv/nfs  /mnt/nfs  nfs4  sec=krb5p,_netdev  0 0
