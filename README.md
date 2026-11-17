@@ -4,7 +4,7 @@ A Linux identity and storage lab built from scratch on UTM virtual machines, in 
 
 1. **Directory (complete):** central identity in **389 Directory Server**, served over **TLS** from a private CA, consumed by **SSSD** clients, with DNS, time, access control, backups and a tested restore.
 2. **Kerberos (complete):** an **MIT Kerberos** realm whose database lives in the same directory. Logins yield tickets, SSH is single sign-on, and machines read the directory with their own keytabs instead of a shared bind password.
-3. **Kerberized NFS (next):** NFSv4 with `sec=krb5p` on top of both.
+3. **Kerberized NFS (complete):** a third host serves NFSv4 with `sec=krb5p`. Every file request carries the user's Kerberos ticket and is encrypted on the wire; the server decides who is asking from the ticket, not from the client's word.
 
 This is a rebuild and extension of my earlier [linux-ldap-lab](https://github.com/OB-Adams/linux-ldap-lab). Every step is backed by a screenshot or a log in this repository.
 
@@ -14,12 +14,13 @@ This is a rebuild and extension of my earlier [linux-ldap-lab](https://github.co
 - [Status](#status)
 - [Phase 1: directory](#phase-1-directory)
 - [Phase 2: Kerberos](#phase-2-kerberos)
+- [Phase 3: Kerberized NFS](#phase-3-kerberized-nfs)
 - [Design decisions](#design-decisions)
 - [Operations](#operations)
 - [Troubleshooting highlights](#troubleshooting-highlights)
 - [Known trade-offs](#known-trade-offs)
 - [Repository layout](#repository-layout)
-- [Next: Kerberized NFS](#next-kerberized-nfs)
+- [Possible extensions](#possible-extensions)
 
 ## Architecture
 
@@ -34,17 +35,27 @@ flowchart LR
   end
   subgraph C["client.lab.local · 192.168.0.220 · CentOS Stream 10"]
     APPS["sshd · sudo · id · ls"]
-    SSSD["SSSD<br/>nss · pam · sudo responders<br/>/etc/krb5.keytab"]
+    SSSD["SSSD<br/>nss · pam · sudo responders"]
+    GSSD["kernel NFS client<br/>rpc-gssd · /etc/krb5.keytab"]
   end
-  N["nfs.lab.local · 192.168.0.230<br/>(phase 3)"]
+  subgraph N["nfs.lab.local · 192.168.0.230 · Rocky Linux 10"]
+    NFSD["kernel nfsd, NFSv4 only<br/>/srv/nfs · sec=krb5p · root_squash"]
+    GSSP["gssproxy<br/>nfs/nfs.lab.local key"]
+    SSSDN["SSSD<br/>UIDs and groups for nfsd"]
+  end
   APPS --> SSSD
-  SSSD -- "StartTLS :389<br/>GSSAPI bind as host/client.lab.local" --> DS
-  SSSD -- "Kerberos :88<br/>user TGTs, host TGT, service tickets" --> KDC
+  APPS --> GSSD
+  SSSD -- "StartTLS :389<br/>GSSAPI bind as host/client" --> DS
+  SSSD -- "Kerberos :88" --> KDC
+  GSSD -- "Kerberos :88<br/>tickets for nfs/nfs.lab.local" --> KDC
+  GSSD == "NFSv4 :2049<br/>every request: ticket + encryption" ==> NFSD
+  NFSD --> GSSP
+  NFSD --> SSSDN
+  SSSDN -- "StartTLS :389<br/>GSSAPI bind as host/nfs" --> DS
   KDC -- "LDAPS :636<br/>kdc-service / kadmin-service" --> DS
-  C -- "DNS :53 (SRV finds the KDC)" --> BIND
-  C -- "NTP :123" --> NTP
+  C -- "DNS :53 · NTP :123" --> BIND
+  N -- "DNS :53 · NTP :123" --> NTP
   CA -. "signs server cert" .-> DS
-  N -. "same SSSD + keytab pattern" .-> DS
 ```
 
 | Layer | Component | Role |
@@ -54,6 +65,7 @@ flowchart LR
 | Authentication | MIT Kerberos (kldap backend) | Passwords are checked once by the KDC; after that, tickets prove identity to SSH and LDAP |
 | Transport | Private CA, StartTLS/LDAPS | Encrypts directory traffic and proves the server's identity |
 | Clients | SSSD, authselect, oddjob-mkhomedir | Linux lookups (NSS) and logins (PAM): identity from the directory, authentication from Kerberos |
+| Storage | NFSv4 server, gssproxy, rpc-gssd | Files served with every request authenticated by the user's ticket and encrypted (`sec=krb5p`); permissions decided by the server from the directory |
 | Operations | Scripts, systemd timer | User lifecycle, health check, nightly backup, restore |
 
 UTM bridged networking on 192.168.0.0/24. SELinux is enforcing and firewalld is on for every host.
@@ -74,7 +86,10 @@ UTM bridged networking on 192.168.0.0/24. SELinux is enforcing and firewalld is 
 | K3 User principals, policy, lockout | done |
 | K4 Client in the realm: host keytab, Kerberos logins, SSH single sign-on | done |
 | K5 Keytab-based LDAP binds (SASL/GSSAPI) | done |
-| Kerberized NFS | next |
+| N1 nfs.lab.local joins: keytab, host identity, SSSD | done |
+| N2 NFS server: NFSv4 only, `sec=krb5p` export, gssproxy | done |
+| N3 Client mount and proofs: root squash, no-ticket denial, shared directory, packet capture | done |
+| N4 Write-up | done |
 
 ## Phase 1: directory
 
@@ -206,6 +221,56 @@ The directory now accepts Kerberos tickets, and SSSD reads it as the machine ins
 | Cutting off one client | rotate the shared password everywhere | remove that host's entry or principal |
 | Adding a host | distribute the password | a keytab and one `ou=Hosts` entry; the mapping and ACIs already cover it |
 
+## Phase 3: Kerberized NFS
+
+Plain NFS (`sec=sys`) trusts the client: each request says "UID 10001" and the server believes it, so root on any allowed client can become anyone. With `sec=krb5p` every request carries a ticket for `nfs/nfs.lab.local` and is encrypted. The server learns **who** is asking from the ticket, then looks up that user's UID and groups **itself**, through its own SSSD, in the same directory. What the client claims about numbers no longer matters.
+
+How one read travels:
+
+1. kofi's process on client touches `/mnt/nfs/...`. The kernel asks **rpc-gssd** for a credential for UID 10001.
+2. rpc-gssd finds kofi's TGT in `KCM:10001` and gets a ticket for `nfs/nfs.lab.local` from the KDC.
+3. The request reaches nfs with that ticket. The kernel hands it to **gssproxy**, which decrypts it with the `nfs/` key in `/etc/krb5.keytab`: this is `kofi@LAB.LOCAL`.
+4. nfs maps kofi to 10001 and his groups through SSSD and LDAP, then applies the ordinary owner, group and mode checks.
+5. File owners cross the wire as names (`kofi@lab.local`) and are stored on disk as numbers; idmapd on both sides uses `Domain = lab.local`.
+
+### N1 nfs.lab.local joins
+
+- Same foundations as client: static address, DNS through ldap, chrony with `makestep 1.0 -1`, the lab CA trusted.
+- `host/nfs.lab.local` in its own keytab, and one new directory entry, `cn=nfs.lab.local,ou=Hosts`. The K5 SASL mapping and ACIs already cover every `host/*`, so nothing else changed in the directory.
+- SSSD with Kerberos authentication and a GSSAPI bind as the host. Only `sysadmins` may log in to the storage server.
+
+![nfs resolves the same users and groups, login rule enforced](docs/screenshots/29-nfs-joined.png)
+![The directory and KDC see nfs as itself](docs/screenshots/30-nfs-gssapi-bind.png)
+
+### N2 The server
+
+- `nfs/nfs.lab.local` added to nfs's keytab; **gssproxy** checks tickets for the kernel (`/proc/net/rpc/use-gss-proxy` = 1).
+- **NFSv4 only:** `vers3=n` in `/etc/nfs.conf`, and rpcbind and statd masked. One port, 2049/tcp. [`configs/nfs/`](configs/nfs)
+- Export [`configs/nfs/lab.exports`](configs/nfs/lab.exports): `/srv/nfs` to `client.lab.local` only, `sec=krb5p` as the **only** flavour, `root_squash`.
+- `users/kofi` and `users/yaw` are 0700. `projects` belongs to a new directory group `projects` (kofi, yaw; [`ldif/group-projects.ldif`](ldif/group-projects.ldif)), mode 2770 with a default ACL ([`configs/nfs/projects-acl.sh`](configs/nfs/projects-acl.sh)).
+
+![v3 off, krb5p only, gssproxy, port 2049 only](docs/screenshots/31-nfs-server-krb5p.png)
+
+### N3 The client, and the proofs
+
+client.lab.local mounts with `sec=krb5p` at boot ([`configs/nfs/fstab.snippet`](configs/nfs/fstab.snippet)); rpc-gssd fetches tickets for each user, and the mount itself uses the host keytab.
+
+| Claim | Evidence |
+|---|---|
+| Root on the client gets nothing | root mounts, but is refused kofi's directory and the shared one (32) |
+| No ticket, no access, even for the owner | kofi with his tickets destroyed is refused his own directory; after `kinit` it opens, and `klist` shows the new `nfs/nfs.lab.local` ticket (33) |
+| Access follows the server's view of owner and group | kofi and yaw each reach their own files and not the other's; both write the shared file (33, 34) |
+| Names on the wire, numbers on disk | client shows `kofi projects`, nfs stores `10001 10002` (34) |
+| Every user access is backed by a ticket | KDC log: `kofi@LAB.LOCAL` and `yaw@LAB.LOCAL` `for nfs/nfs.lab.local` (34) |
+| krb5p encrypts file data | the same marker written over a `sec=krb5` mount appears in a packet capture; over `sec=krb5p` it appears 0 times (35) |
+
+![sec=krb5p mount, root squashed](docs/screenshots/32-nfs-mount-root-squash.png)
+![No ticket: denied on his own directory; after kinit: allowed](docs/screenshots/33-nfs-kofi-ticket.png)
+![yaw on the shared directory, the server's numeric view, the KDC's tickets](docs/screenshots/34-nfs-yaw-shared.png)
+![Packet capture: marker readable under krb5, absent under krb5p](docs/screenshots/35-nfs-krb5-vs-krb5p.png)
+
+The capture needed the export to accept plain `krb5` for a few minutes; it was put back to `sec=krb5p` only afterwards.
+
 ## Design decisions
 
 | Decision | Why | Alternative considered |
@@ -222,6 +287,10 @@ The directory now accepts Kerberos tickets, and SSSD reads it as the machine ins
 | KDC located by DNS SRV records | Moving or adding a KDC is a zone change, not an edit on every client | `kdc =` lines in each `krb5.conf` |
 | `krb5_validate = true` | Proves each TGT came from the real KDC, defeating a spoofed KDC that answers with a key it chose | Accept any TGT that decrypts with the password |
 | Host keytab for LDAP binds (SASL/GSSAPI) | Per-host secret that can be revoked alone, attribution in logs, no password in config files | Shared `sssd-bind` password (M3-K4) |
+| NFSv4 only | One port (2049), file owners as names, Kerberos designed in; no rpcbind, mountd or statd on the network | NFSv3 with its helper services |
+| The export accepts `sec=krb5p` and nothing else | The server enforces encryption; a client cannot choose a weaker flavour (a `sec=krb5` mount only worked while the export was widened for the capture) | `sec=sys`, or a list of flavours for clients to pick from |
+| The server resolves identity itself | Under Kerberos the server maps the ticket's principal to a UID and groups through its own SSSD, so the client's claims carry no weight | Trusting client-supplied UIDs (`sec=sys`) |
+| Shared directory: setgid plus a default ACL | setgid keeps new files in group `projects`; the ACL keeps them group-writable whatever each user's umask | `umask 002` for every user on every client |
 
 ## Operations
 
@@ -251,13 +320,14 @@ The admin password goes in a 0600 temporary file read with `-y`, so it never app
 
 ## Troubleshooting highlights
 
-The full log, with the diagnosis path for each problem, is in [`docs/troubleshooting.md`](docs/troubleshooting.md). Five of them:
+The full log, with the diagnosis path for each problem, is in [`docs/troubleshooting.md`](docs/troubleshooting.md). Six of them:
 
 1. **The network intercepts DNS.** External lookups returned SERVFAIL while lab names worked. The named log showed `broken trust chain` at the first DS record, whichever forwarder was set, and `id.server CH TXT` to 1.1.1.1 timed out. Something upstream answers port 53 itself and strips DNSSEC data. Fixed by turning DNSSEC validation off, as a documented trade-off.
 2. **The service account locked itself out.** A wrong password in `sssd.conf` made SSSD fail three binds, the global policy locked `sssd-bind`, and every client went offline. That exposed a design flaw, not just a typo, and led to the subtree policy for `ou=Services`.
 3. **Clock offset found in the drill logs.** Laid side by side, the two hosts' logs showed the client "losing" the user before the server deleted her. Client was about 18 s behind, because paused VMs only slewed back (default `makestep 1.0 3`). Fixed with `makestep 1.0 -1` before Kerberos, which rejects more than 5 minutes of skew.
 4. **Kerberos lockout never triggered.** The KDC's updates to user entries were refused (`err=50`). ACL tracing named one missing attribute per run, `krbExtraData` and then `krbLastAdminUnlock`, which the KDC writes in the same all-or-nothing modify as the failure counter.
 5. **The host's GSSAPI bind was refused although its ticket was valid.** A one-bind trace of the SASL mapping showed 389-ds receives `host/client.lab.local` without the realm, so a rule ending in `@LAB.LOCAL` never matched and a built-in rule searched for a uid that doesn't exist. Fixed with `^host/\(.*\)$`.
+6. **A member of the shared group could read but not write.** yaw was refused `>>` on a file kofi created in `projects`: setgid had set the group correctly, but kofi's `022` umask made it `rw-r--r--`. setgid decides a file's group, not that group's rights. A default ACL on the directory fixed it, and a file created over NFS afterwards came out `-rw-rw----+`.
 
 ## Known trade-offs
 
@@ -268,6 +338,10 @@ The full log, with the diagnosis path for each problem, is in [`docs/troubleshoo
 - **`.local` is reserved for mDNS** (RFC 6762). The VMs run no mDNS resolver, so BIND answers normally, but macOS sends `.local` names to mDNS, so the Mac reaches the VMs by IP. A real deployment would use an owned domain or `home.arpa`.
 - **DNSSEC validation is off** because the upstream network intercepts port 53. Production would use encrypted DNS (DoT or DoH).
 - **Backups stay on the server's own disk.** A production setup copies them off-host (3-2-1).
+- **Revoking a ticket does not end NFS access at once.** After a user's first access the client and server keep a security context until the ticket expires (24 h here), so `kdestroy` or disabling the principal does not cut off a session already in use. Remounting on the client, or flushing `/proc/net/rpc/auth.rpcsec.context` on the server, forces a fresh ticket.
+- **One NFS server, and its data is not in the backups.** There is no failover, and `ldap-backup.sh` covers the directory only. Production would back up `/srv/nfs` and consider a replicated or clustered store.
+- **SELinux lets NFS export anything listed.** The default boolean `nfs_export_all_rw` is on, so `/etc/exports` alone limits what is shared. Stricter: turn it off and label only `/srv/nfs` (`public_content_rw_t`).
+- **`krb5p` costs CPU.** Every request is encrypted and decrypted on both ends. For data that only needs tamper protection, `krb5i` is cheaper.
 - **SSSD caches credentials.** With `cache_credentials = true` and `krb5_store_password_if_offline = true`, a client that cannot reach the directory or the KDC still accepts a cached password, so a lock or deletion is not seen there until it reconnects.
 
 ## Repository layout
@@ -279,18 +353,21 @@ configs/389ds/    lab.inf.example
 configs/tls/      CA and server certificate extension files
 configs/sssd/     sssd.conf.example (client side: LDAP identity, Kerberos auth, GSSAPI bind)
 configs/krb5/     krb5.conf (every host), kdc.conf and kadm5.acl (KDC)
+configs/nfs/      nfs.conf and idmapd.conf snippets, the export, the client fstab line,
+                  the shared-directory ACL script
 configs/systemd/  nightly backup service and timer; drop-ins ordering the KDC after the
                   directory and giving dirsrv its keytab
 ldif/             directory structure, service accounts, ACIs (identity, sudo, Kerberos,
-                  hosts), sudo rules, host identities, SASL mapping
+                  hosts), sudo rules, host identities, SASL mapping, the projects group
 scripts/          ldap-add-user.sh, ldap-del-user.sh, ldap-healthcheck.sh, ldap-backup.sh
 docs/             troubleshooting.md, screenshots/, evidence/m5-restore-drill/
 ```
 
 Secrets are never committed: `.gitignore` excludes keys, CSRs, keytabs, `lab.inf` and `sssd.conf`, and the example files carry placeholders. The master key stash and `ldap.stash` never leave ldap.
 
-## Next: Kerberized NFS
+## Possible extensions
 
-1. **nfs.lab.local** joins like client: SSSD, its own host keytab and an `ou=Hosts` entry. The existing SASL mapping and ACIs already cover it, and UIDs match on every host because they come from one directory (DNA guarantees they are never reused).
-2. **An `nfs/nfs.lab.local` service principal** in the NFS server's keytab, and an export with `sec=krb5p`: every request is authenticated with the user's ticket and the traffic is encrypted.
-3. **Access tests:** kofi and yaw reach their own files and shared group directories with their tickets; without a ticket, or as a user outside the group, access is refused.
+- **Home directories on NFS with autofs:** automount maps stored in LDAP, so `/home/<user>` follows each user to any host.
+- **Redundancy:** a second 389-ds replica with its own KDC, both found through the existing SRV records.
+- **Automation:** rebuild all three hosts from Ansible roles, using these runbooks' steps and this repository's configs.
+- **Monitoring:** alert on KDC, directory and NFS health, certificate expiry (the health check already computes it) and keytab age.
