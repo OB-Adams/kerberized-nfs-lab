@@ -11,3 +11,9 @@ objectClass: top
 objectClass: device
 cn: client.lab.local
 description: LDAP identity of host/client.lab.local@LAB.LOCAL (SASL/GSSAPI binds)
+
+dn: cn=nfs.lab.local,ou=Hosts,dc=lab,dc=local
+objectClass: top
+objectClass: device
+cn: nfs.lab.local
+description: LDAP identity of host/nfs.lab.local@LAB.LOCAL (SASL/GSSAPI binds)

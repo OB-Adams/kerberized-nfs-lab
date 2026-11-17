@@ -45,6 +45,7 @@ ldap_user_gecos = cn
 # Lookup identity (K5): SASL/GSSAPI bind as host/client.lab.local, key from the keytab.
 # 389-ds maps it to cn=client.lab.local,ou=Hosts (ldif/sasl-map-hosts.ldif).
 ldap_sasl_mech = GSSAPI
+# Each host names its own principal: host/nfs.lab.local@LAB.LOCAL on nfs
 ldap_sasl_authid = host/client.lab.local@LAB.LOCAL
 ldap_krb5_keytab = /etc/krb5.keytab
 ldap_krb5_init_creds = true
